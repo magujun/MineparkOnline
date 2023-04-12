@@ -76,8 +76,11 @@ Install Maven 3.9.1 and run from project root
 ## 🎓 Who taught?
 
 The Java and JavaFX courses that led me to develop this project are part of Okanagan College's Computer Information Systems.
+
 Course Instructors:
+
 **[Sarah Foss](https://github.com/sarahfoss)**  COSC121 :: Computer Programming I
+
 **[Daniel Ling]()** COSC318 :: Network Programming
 
 ## 🤔 Contribute
