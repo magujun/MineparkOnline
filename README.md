@@ -28,7 +28,7 @@ This project has been developed and tested with the following technologies:
 
 - [Java](https://www.java.com/en/) :: Oracle Java™ Language | OpenJDK JRE
 - [JavaFX](https://openjfx.io/) :: JavaFX Framework | OpenJFX SDK (>= 17)
-- [Maven]() :: Apache Maven
+- [Maven](https://maven.apache.org) :: Apache Maven Plug-in (>= 3.8.4)
 - [...Work in progress](https://github.com/magujun/MineparkOnline)
 
 ## ⤵ Setup
@@ -63,7 +63,7 @@ The following commands are an example for a GNU/Linux x86_64 environment (Debian
 ```
 
 ## Using Maven
-Install Maven 3.9.1 and run from project root
+Install [Maven](https://maven.apache.org/install.html) 3.9.1 and run from project root
 
 **MAVEN Compile & Run**
 - MineparkOnline (Server) ```mvn exec:java```
@@ -81,7 +81,7 @@ Course Instructors:
 
 **[Sarah Foss](https://github.com/sarahfoss)**  COSC121 :: Computer Programming II
 
-**[Daniel Ling]()** COSC318 :: Network Programming
+**[Daniel Ling](https://www.okanagan.bc.ca/ling-daniel)** COSC318 :: Network Programming
 
 ## 🤔 Contribute
 
