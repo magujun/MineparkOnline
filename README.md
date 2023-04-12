@@ -62,8 +62,8 @@ The following commands are an example for a GNU/Linux x86_64 environment (Debian
     - java --module-path tmp/javafx-sdk-18/lib --add-modules=javafx.controls,javafx.media,javafx.graphics -classpath bin:tmp/javafx-sdk-18/lib/javafx-swt.jar:tmp/javafx-sdk-18/lib/javafx.base.jar:tmp/javafx-sdk-18/lib/javafx.controls.jar:tmp/javafx-sdk-18/lib/javafx.graphics.jar:tmp/javafx-sdk-18/lib/javafx.media.jar:tmp/javafx-sdk-18/lib/javafx.swing.jar:tmp/javafx-sdk-18/lib/javafx.web.jar Minepark
 ```
 
-## Using Maven
-Install [Maven](https://maven.apache.org/install.html) 3.9.1 and run from project root
+## Alternative: Using Maven
+Install Apache [Maven](https://maven.apache.org/install.html) and run from project root
 
 **MAVEN Compile & Run**
 - MineparkOnline (Server) ```mvn exec:java```
