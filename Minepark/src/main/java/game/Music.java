@@ -25,9 +25,10 @@ class Music {
             System.out.println("Missing media files!" + e.getMessage());
         }
         getMediaPlayer().setAutoPlay(true);
+        getMediaPlayer().setCycleCount(MediaPlayer.INDEFINITE);
     }
 
-    void stop() {
+    public void stop() {
         getMediaPlayer().stop();
         getMediaPlayer().dispose();
     }

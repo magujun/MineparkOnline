@@ -4,13 +4,15 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaException;
 import javafx.scene.media.MediaPlayer;
 
-class SoundEffect {
+public class SoundEffect {
 
     private MediaPlayer mediaPlayer;
     private String effect;
+    int count;
 
-    public SoundEffect(String effect) {
+    public SoundEffect(String effect, int count) {
         this.effect = effect;
+        this.count = count;
     }
 
     public void start() {
@@ -22,10 +24,12 @@ class SoundEffect {
             System.out.println("Missing media files!" + e.getMessage());
         }
         mediaPlayer.setAutoPlay(true);
+        mediaPlayer.setCycleCount(count);
     }
 
-    void stop() {
+    public void stop() {
         mediaPlayer.stop();
         mediaPlayer.dispose();
     }
+
 }

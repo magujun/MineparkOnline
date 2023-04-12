@@ -1,5 +1,6 @@
 package game;
 
+import multiplayer.Multiplayer;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -13,7 +14,7 @@ public class MainMenu extends MenuBar {
     public MainMenu(Game game) {
 
         this.menu = new Menu("Menu");
-        this.effect = new SoundEffect("fastclick");
+        this.effect = new SoundEffect("fastclick",1);
         setStyle("-fx-background-radius: 0 0 10 10;");
         getMenus().add(menu);
 
@@ -21,6 +22,9 @@ public class MainMenu extends MenuBar {
         menu.getItems().add(newgameItem);
         newgameItem.setOnAction(e -> {
             effect.start();
+            modeMenu.setDisable(false);
+            modeSingle.setDisable(false);
+            modeMulti.setDisable(false);
             game.getTimeline().stop();
             game.play(game.getDifficulty(), game.getMultiplayer(), game.getClient());
         });

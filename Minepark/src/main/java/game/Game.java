@@ -1,5 +1,6 @@
 package game;
 
+import multiplayer.Multiplayer;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -47,18 +48,17 @@ public class Game extends BorderPane {
         setMultiplayer(multiplayer);
         if (getMultiplayer() != null) {
             setOpponentImg("opponent" + getDifficulty());
-            setTurn(multiplayer.isTurn());
         }
         setTimer(this.getMultiplayer() == null ? 0 : 20);
         setDead(false);
         setSafe(false);
 
         setDifficulty(difficulty);
-        
+
         if (getMusic() != null && getMusic().isPlaying()) {
             getMusic().stop();
         }
-        
+
         setMusic(new Music("background", getDifficulty()));
         getMusic().start();
 
@@ -124,29 +124,33 @@ public class Game extends BorderPane {
         getStage().setScene(scene);
         getStage().setTitle("Minepark");
         getStage().setResizable(false);
-        getStage().centerOnScreen();
         getStage().show();
     }
 
-    void myTurn() {
+    public void myTurn() {
         setTimer(20);
         getTimeline().play();
         setPlayerImg(getPlayerImg());
-        if (getTimer() == 0 || getGrid().isPressed()) {
-            getTimeline().stop();
-            getGrid().setDisable(true);
-            getGrid().opacityProperty().set(90.0);
-        }
+        while (getTimer() != 0 && !getGrid().isPressed()) {}
+        getTimeline().stop();
+        getGrid().setDisable(true);
+        getGrid().opacityProperty().set(90.0);
+        setTurn(false);
+        client.send(getGrid().getGridState());
+        opponentTurn();
     }
 
-    void opponentTurn() {
+    public void opponentTurn() {
         setTimer(20);
         getTimeline().play();
         setPlayerImg(getOpponentImg());
-        if (getTimer() == 0) {
-            getTimeline().stop();
-            getGrid().setDisable(false);
-        }
+        while (getTimer() != 0) {}
+        getTimeline().stop();
+        getGrid().setDisable(false);
+        getGrid().opacityProperty().set(100.0);
+        setTurn(true);
+        getGrid().setState(getGrid().getTiles(), getGrid().getNumRows(), getGrid().getNumCols(), client.receive());
+        myTurn();
     }
 
     // Process game win for clearing all safe tiles

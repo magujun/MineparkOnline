@@ -10,6 +10,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -46,6 +49,7 @@ public class MineparkServer {
      * @throws java.io.IOException
      */
     private static ArrayList<Player> players;
+    private static ScheduledExecutorService executor;
     private static final int PORT = 7001;
 
     public static void main(String[] args) {
@@ -65,19 +69,28 @@ public class MineparkServer {
             sslcontext.init(kmf.getKeyManagers(), null, null);
             ServerSocketFactory ssf = sslcontext.getServerSocketFactory();
 
+            Runnable checkPlayers = () -> {
+                checkConnectedPlayers();
+            };
+
+            executor = Executors.newScheduledThreadPool(1);
+            executor.scheduleAtFixedRate(checkPlayers, 0, 10, TimeUnit.SECONDS);
+
             try (SSLServerSocket listener = (SSLServerSocket) ssf.createServerSocket(PORT)) {
                 players = new ArrayList<>();
                 System.out.println("Minepark Server is Running");
                 while (true) {
                     SSLSocket socket = (SSLSocket) listener.accept();
                     Player player = new Player(socket);
-                    if (player.isConnected()) {
-                        System.out.println(" - New player: " + player.getNickname());
-                        player.send("CONNECTED");
-                        player.setName(player.getNickname());
-                        players.add(player);
-                        player.start();
+                    if (!player.isConnected()) {
+                        disconnectPlayer(player);
+                        break;
                     }
+                    System.out.println(" - New player: " + player.getNickname());
+                    player.send("CONNECTED");
+                    player.setName(player.getNickname());
+                    players.add(player);
+                    player.start();
                 }
             } catch (IOException ioe) {
                 System.out.println("Socket error: " + ioe.getLocalizedMessage());
@@ -99,13 +112,23 @@ public class MineparkServer {
         }
     }
 
+    static void checkConnectedPlayers() {
+        for (Player p : players) {
+            if (p.getInput() == null || p.receive() == null) {
+                disconnectPlayer(p);
+            }
+        }
+    }
+
     static void disconnectPlayer(Player p) {
 
         try {
-            System.out.println(p.getNickname() + " disconnected");
+            p.getMatch().disconnect();
             p.setConnected(false);
-            p.getInput();
+            p.getInput().close();
+            p.getOutput().close();
             p.getSocket().close();
+            System.out.println(p + " disconnected");
             players.remove(p);
         } catch (IOException ioe) {
             String message = "Error disconnecting player: " + ioe.getLocalizedMessage();
@@ -120,11 +143,10 @@ public class MineparkServer {
     static void listPlayers(Player player) {
         player.send("PLS");
         for (Player p : players) {
-            if (p.getNickname().equals("admin") || p.getNickname().equals(player.getNickname())) {
+            if (p.getNickname().equals(player.getNickname())) {
                 continue;
             }
             player.send(p.getOpponent() != null ? (p.getNickname() + " vs " + p.getOpponent().getNickname()) : p.getNickname());
-            System.out.println("player: " + p.getNickname() + " => opponent: " + (p.getOpponent() != null ? p.getOpponent().getNickname() : "none"));
         }
         player.send("PLE");
     }

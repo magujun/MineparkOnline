@@ -179,13 +179,27 @@ public class Grid extends GridPane {
         // On first click, get mines positioning
         // Update grid state and output layout to console
         Tile tile;
-        for (int row = 0; row < numRows; row++) {
-            for (int col = 0; col < numCols; col++) {
-                int item = row * numCols + col;
+        for (int row = 0; row < getNumRows(); row++) {
+            for (int col = 0; col < getNumCols(); col++) {
+                int item = row * getNumCols() + col;
                 tile = (Tile) getChildren().get(item);
                 tile.setType(tiles[row][col]);
             }
         }
+    }
+
+    /**
+     * @return the numRows
+     */
+    public int getNumRows() {
+        return numRows;
+    }
+
+    /**
+     * @return the numCols
+     */
+    public int getNumCols() {
+        return numCols;
     }
 
 }

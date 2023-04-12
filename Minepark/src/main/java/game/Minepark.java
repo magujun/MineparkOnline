@@ -89,6 +89,7 @@ public class Minepark extends Application {
         //After fade out, start game
         fadeOut.setOnFinished(e -> {
             stage.close();
+            primaryStage.centerOnScreen();
             Game game = new Game(primaryStage);
             game.play();
             primaryStage.setOnCloseRequest(ex -> {

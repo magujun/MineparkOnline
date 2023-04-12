@@ -22,6 +22,7 @@ class Player extends Thread {
     private BufferedReader input;
     private PrintWriter output;
     private boolean connected;
+    private Match match;
 
     /**
      * Constructs a handler thread for a given socket and mark initializes the
@@ -33,8 +34,10 @@ class Player extends Thread {
             this.socket = socket;
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new PrintWriter(socket.getOutputStream(), true);
-            this.nickname = input.readLine();
-            this.connected = true;
+            if (input.readLine().equals("CONNECT")) {
+                this.nickname = input.readLine();
+                this.connected = true;
+            }
         } catch (IOException e) {
             System.out.println("Connection error with player " + nickname + ":" + e);
         }
@@ -47,24 +50,27 @@ class Player extends Thread {
 
         // The thread is only started after everyone connects.
         if (isConnected()) {
-            Match match = new Match(this, getOpponent());
-            match.connect();
+            setMatch(new Match(this, getOpponent()));
+            getMatch().connect();
         }
     }
 
     public void listen() {
 
-        message = receive();
-        if (message == null) {
+        if (input == null) {
             disconnectPlayer(this);
-        } else if (message.equals("LIST")) {
-            listPlayers(this);
-        } else if (message.startsWith("OPPONENT")) {
-            String opponentNickname = getMessage().split("\\|")[1];
-            setOpponent(getPlayer(opponentNickname));
-        } else if (message.equals("ACCEPT")) {
-            getOpponent().send(message);
+        } else {
+            message = receive();
+            if (message == null) {
+                disconnectPlayer(this);
+            } else if (message.equals("LIST")) {
+                listPlayers(this);
+            } else if (message.startsWith("OPPONENT|")) {
+                String opponentNickname = getMessage().split("\\|")[1];
+                setOpponent(getPlayer(opponentNickname));
+            }
         }
+
     }
 
     /**
@@ -248,5 +254,19 @@ class Player extends Thread {
      */
     public void setOutput(PrintWriter output) {
         this.output = output;
+    }
+
+    /**
+     * @return the match
+     */
+    public Match getMatch() {
+        return match;
+    }
+
+    /**
+     * @param match the match to set
+     */
+    public void setMatch(Match match) {
+        this.match = match;
     }
 }

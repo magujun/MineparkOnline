@@ -21,7 +21,7 @@ public class ScoreBar extends ToolBar {
 
         this.timer = game.getTimer();
         this.mines = game.getMines();
-        this.effect = new SoundEffect("fastclick");
+        this.effect = new SoundEffect("fastclick",1);
         game.setTimer(game.getMultiplayer() != null ? timer - 1 : timer + 1);
 
         setStyle("-fx-background-radius: 10 10 0 0;");
@@ -73,7 +73,7 @@ public class ScoreBar extends ToolBar {
         player.setOnMouseClicked(e -> {
             effect.start();
             game.getTimeline().stop();
-            game.play(game.getDifficulty(), game.getMultiplayer(), game.getClient());
+            game.play(game.getDifficulty(), null, null);
         });
 
         for (int i = 1; i < 4; i++) {

@@ -1,15 +1,16 @@
-package game;
+package multiplayer;
 
+import game.Alert;
+import game.Game;
+import game.SoundEffect;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import javafx.animation.FadeTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -20,23 +21,26 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
-import multiplayer.MineparkClient;
 
 public class Multiplayer extends Thread {
 
-    private String nickname, opponent, serverAddress, opponentImg;
-    private boolean turn;
     private final Game game;
+    private final SoundEffect effect;
+    private String nickname, message, input, opponent, opponentImg;
     private GridPane centerPane, topPane;
+    private TilePane topMenu;
     private MineparkClient client;
-    private FadeTransition fadeInCenter, fadeInTop, fadeOutCenter, fadeOutTop;
+    private FadeTransition fadeInCenter, fadeInTop, fadeOutCenter;
+    private Button connectButton;
+    private Label messageLabel, nickLabel;
+    private TextField nickField;
     private ArrayList<String> remotePlayers;
     private ObservableList<String> playerList;
     private ListView<String> list;
-    private ScheduledExecutorService executor;
 
     public Multiplayer(Game game) {
         this.game = game;
+        this.effect = new SoundEffect("fastclick", 1);
     }
 
     public void multiplayerMenu() {
@@ -48,13 +52,12 @@ public class Multiplayer extends Thread {
         list.setPrefSize(centerPane.getPrefWidth(), centerPane.getPrefHeight());
         playerList = FXCollections.observableArrayList();
         list.setItems(playerList);
-        centerPane.getChildren().removeAll();
         centerPane.getChildren().add(list);
 
         topPane = new GridPane();
         topPane.setPrefSize(game.getScorebar().getWidth(), game.getScorebar().getHeight());
 
-        TilePane topMenu = new TilePane();
+        topMenu = new TilePane();
         topMenu.setPrefSize(topPane.getPrefWidth(), topPane.getPrefHeight());
         topMenu.setBackground(Background.fill(Color.WHITE));
         topMenu.setOrientation(Orientation.HORIZONTAL);
@@ -62,17 +65,21 @@ public class Multiplayer extends Thread {
         topMenu.setHgap(5.0);
         topMenu.setVgap(5.0);
 
-        TextField nickField = new TextField();
+        nickField = new TextField();
         nickField.setAlignment(Pos.CENTER);
         nickField.setPrefWidth(topPane.getPrefWidth() / 2);
 
-        Label nickLabel = new Label("Nickname");
+        nickLabel = new Label("Nickname");
         nickLabel.setLabelFor(nickField);
 
-        Button connectButton = new Button();
+        messageLabel = new Label();
+        messageLabel.setTextFill(Color.RED);
+
+        connectButton = new Button();
         connectButton.setText("_Connect");
         connectButton.setMnemonicParsing(true);
         connectButton.setOnAction(e -> {
+            effect.start();
             nickField.setBorder(Border.EMPTY);
             if (nickField.getText().isBlank()) {
                 nickField.setBorder(Border.stroke(Color.RED));
@@ -80,21 +87,29 @@ public class Multiplayer extends Thread {
             } else if (nickname == null) {
                 setNickname(nickField.getText());
                 nickField.setDisable(true);
+                connectButton.setText("_Get Opponents");
                 connectServer();
             } else if (opponent == null) {
-                String selectedOpponent = list.getSelectionModel().getSelectedItem();
-                if (selectedOpponent != null) {
-                    setOpponent(selectedOpponent);
-                }
-            } else if (opponent != null) {
-                connectOpponent();
+                client.send("LIST");
+                messageLabel.setText("Please select an opponent");
             }
+        });
 
+        list.setOnMouseClicked(e -> {
+            String selectedOpponent = list.getSelectionModel().getSelectedItem();
+            if (!selectedOpponent.contains(" vs ")) {
+                connectButton.setDisable(true);
+                messageLabel.setText("Inviting " + selectedOpponent + " to play a match");
+                connectOpponent(selectedOpponent);
+            } else {
+                messageLabel.setText("These folks are playing a match.\r\nPlease select another opponent");
+            }
         });
 
         topMenu.getChildren().add(nickLabel);
         topMenu.getChildren().add(nickField);
         topMenu.getChildren().add(connectButton);
+        topMenu.getChildren().add(messageLabel);
         topPane.add(topMenu, 0, 0);
 
         game.getBase().setTop(topPane);
@@ -128,102 +143,77 @@ public class Multiplayer extends Thread {
     }
 
     public void connectServer() {
-        if (client == null) {
-            serverAddress = "minepark.oncoto.app";
-            serverAddress = ""; // defaults to localhost
+        if (client == null || !client.isConnected()) {
             try {
-                client = new MineparkClient(serverAddress);
-                client.send(getNickname());
+                String serverAddress = "minepark.oncoto.app";
+                int port = 7001;
+                //String serverAddress = ""; // defaults to localhost
+                client = new MineparkClient(serverAddress, port);
+                client.send("CONNECT");
+                client.send(nickname);
+                start();
             } catch (Exception ex) {
-                System.out.println("Error: " + ex);
-            }
-        }
-        if (client.isConnected()) {
-            Runnable listPlayers = () -> {
-                listPlayers();
-                opponentConnect();
-            };
-            executor = Executors.newScheduledThreadPool(10);
-            executor.scheduleAtFixedRate(listPlayers, 0, 5, TimeUnit.SECONDS);
-        } else {
-            String message = "No connection to MineparkOnline server.";
-            Alert alert = new Alert();
-            alert.showMessage(message);
-        }
-    }
-
-    public void listPlayers() {
-        client.send("LIST");
-        String response = client.listen();
-        if (response != null) {
-            System.out.println(response);
-            if (response.startsWith("PL|")) {
-                remotePlayers = new ArrayList<>();
-                String input = response.split("PL\\|")[1];
-                remotePlayers.addAll(Arrays.asList(input.split("\\|")));
-                playerList = FXCollections.observableArrayList(remotePlayers);
-                list.setItems(playerList);
-                centerPane.getChildren().removeAll();
-                centerPane.getChildren().add(list);
-            }
-        }
-    }
-
-    public void opponentConnect() {
-        String response = client.listen();
-        System.out.println(response);
-        if (response != null) {
-            if (response.startsWith("OPPONENT|")) {
-                list.setDisable(true);
-                executor.shutdown();
-                setTurn(false);
-                startMultiplayerGame();
-            }
-        }
-    }
-
-    public void connectOpponent() {
-        client.send("OPPONENT|" + getOpponent());
-        String response = client.listen();
-        System.out.println(response);
-        if (response.equals("ACCEPT")) {
-            list.setDisable(true);
-            executor.shutdown();
-            setTurn(true);
-            startMultiplayerGame();
-        }
-    }
-
-    public void startMultiplayerGame() {
-        game.play(game.getDifficulty(), this, client);
-        while (true) {
-            if (game.isTurn()) {
-                game.myTurn();
-            } else {
-                game.opponentTurn();
+                System.out.println("Client connection error: " + ex);
+                disconnectServer();
+                message = "No connection to MineparkOnline server.";
+                Alert alert = new Alert();
+                alert.showMessage(message);
             }
         }
     }
 
     @Override
     public void run() {
-        try {
-            while (true) {
-                client.send(game.getGrid().getGridState());
-                String response = client.receive();
-                if (response.startsWith("LOST")) {
-                    game.gameWin();
-                    break;
-                } else if (response.startsWith("WON")) {
-                    game.gameOver();
-                } else if (response.startsWith("MESSAGE")) {
-                    String message = client.receive();
+        while (getOpponent() == null) {
+            message = client.listen();
+            if (message != null) {
+                System.out.println(message);
+                if (message.startsWith("PL|")) {
+                    remotePlayers = new ArrayList<>();
+                    input = message.split("PL\\|")[1];
+                    remotePlayers.addAll(Arrays.asList(input.split("\\|")));
+                    Platform.runLater(() -> {
+                        playerList = FXCollections.observableArrayList(remotePlayers);
+                        list.setItems(playerList);
+                        centerPane.getChildren().remove(list);
+                        centerPane.getChildren().add(list);
+                    });
+                } else if (message.startsWith("OPPONENT|")) {
+                    opponentConnect(message);
                 }
-                game.getGrid().setGridState(client.receive());
             }
-        } finally {
-            client.disconnect();
         }
+    }
+
+    public void opponentConnect(String message) {
+        list.setDisable(true);
+        connectButton.setDisable(true);
+        setOpponent(message.split("\\|")[1]);
+        messageLabel.setText("Connecting to " + getOpponent());
+        client.send("ACCEPT|" + getOpponent());
+        System.out.println(message);
+        startMultiplayerGame(false);
+    }
+
+    public void connectOpponent(String selectedOpponent) {
+        list.setDisable(true);
+        connectButton.setDisable(true);
+        client.send("OPPONENT|" + selectedOpponent);
+        String response = client.listen();
+        System.out.println(response);
+        if (response.startsWith("ACCEPT|")) {
+            setOpponent(selectedOpponent);
+            startMultiplayerGame(false);
+        } else {
+            list.setDisable(false);
+            connectButton.setDisable(false);
+        }
+    }
+
+    public void startMultiplayerGame(boolean turn) {
+        game.setTurn(turn);
+        game.play(game.getDifficulty(), this, client);
+        client.disconnect();
     }
 
     private boolean wantsToPlayAgain() {
@@ -272,17 +262,4 @@ public class Multiplayer extends Thread {
         this.opponent = opponent;
     }
 
-    /**
-     * @return the turn
-     */
-    public boolean isTurn() {
-        return turn;
-    }
-
-    /**
-     * @param turn the turn to set
-     */
-    public void setTurn(boolean turn) {
-        this.turn = turn;
-    }
 }

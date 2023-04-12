@@ -17,9 +17,11 @@ class Match {
         this.player2 = player2;
     }
 
-    public synchronized void connect() {
+    public void connect() {
         player2.send("OPPONENT|" + player1.getNickname());
-        if (player1.receive().equals("ACCEPT")) {
+        String response = player2.receive();
+        if (response != null && response.startsWith("ACCEPT|")) {
+            player1.send(response);
             player1.setOpponent(player2);
             player2.setOpponent(player1);
         } else {
@@ -29,6 +31,9 @@ class Match {
 
     public void disconnect() {
         player1.setOpponent(null);
+        player1.findMatch();
+        player2.setOpponent(null);
+        player2.findMatch();
     }
 
 }

@@ -15,9 +15,22 @@ import javax.net.ssl.SSLSocketFactory;
  * OPPONENT // players loop PLE // players list end TIE TIE TIE MESSAGE
  *
  */
+
+    /**
+     * The main thread of the client will listen for messages from the
+     * server.The first message will be a "CONNECTED" message in which we receive
+     * our mark.Then we go into a loop listening for "VALID_MOVE",
+     * "OPPONENT_MOVED", "VICTORY", "DEFEAT", "TIE", "OPPONENT_QUIT or "MESSAGE"
+     * messages, and handling each message appropriately. The "VICTORY",
+     * "DEFEAT" and "TIE" ask the user whether or not to play another game. If
+     * the answer is no, the loop is exited and the server is sent a "QUIT"
+     * message. If an OPPONENT_QUIT message is received then the loop will exit
+     * and the server will be sent a "QUIT" message also.
+     *
+     */
+
 public class MineparkClient {
 
-    private final int PORT = 7001;
     private boolean connected;
     private String message, playerList;
     private SSLSocket socket;
@@ -29,15 +42,16 @@ public class MineparkClient {
      * registering GUI listeners.
      *
      * @param serverAddress
+     * @param port
      */
-    public MineparkClient(String serverAddress) {
+    public MineparkClient(String serverAddress, int port) {
 
         // Setup networking
         try {
             System.setProperty("javax.net.ssl.trustStore", "src/main/resources/trustedcerts");
             System.setProperty("javax.net.ssl.trustStorePassword", "letmein");
             SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-            this.socket = (SSLSocket) factory.createSocket(serverAddress, PORT);
+            this.socket = (SSLSocket) factory.createSocket(serverAddress, port);
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new PrintWriter(socket.getOutputStream(), true);
             this.connected = true;
@@ -73,44 +87,33 @@ public class MineparkClient {
 
     public String listen() {
 
-        message = receive();
-
-        if (message.equals("CONNECTED")) {
-            setConnected(true);
-            return message;
-        }
-
-        if (message.startsWith("OPPONENT")) {
-            send("ACCEPT");
-            return message;
-        }
-
-        if (message.equals("PLS")) {
-            playerList = "PL|";
-            message = receive();
-            while (!message.equals("PLE")) {
-                playerList += message;
+        if (input != null) message = receive();
+        if (message != null) {
+            if (message.equals("CONNECTED")) {
+                setConnected(true);
+                return message;
+            } else if (message.startsWith("OPPONENT|")) {
+                return message;
+            } else if (message.startsWith("ACCEPT|")) {
+                return message;
+            } else if (message.equals("PLS")) {
+                playerList = "PL|";
                 message = receive();
-                playerList += (!message.equals(" PLE") ? "|" : "");
+                while (!message.equals("PLE")) {
+                    playerList += message;
+                    message = receive();
+                    playerList += (!message.equals("PLE") ? "|" : "");
+                }
+                return (playerList.split("\\|").length > 1 ? playerList : null);
             }
-            return playerList;
         }
+        System.out.println(message);
         return null;
     }
 
     /**
-     * The main thread of the client will listen for messages from the
-     * server.The first message will be a "WELCOME" message in which we receive
-     * our mark.Then we go into a loop listening for "VALID_MOVE",
-     * "OPPONENT_MOVED", "VICTORY", "DEFEAT", "TIE", "OPPONENT_QUIT or "MESSAGE"
-     * messages, and handling each message appropriately. The "VICTORY",
-     * "DEFEAT" and "TIE" ask the user whether or not to play another game. If
-     * the answer is no, the loop is exited and the server is sent a "QUIT"
-     * message. If an OPPONENT_QUIT message is received then the loop will exit
-     * and the server will be sent a "QUIT" message also.
-     *
-     */
-    /**
+     * 
+     * 
      * @return the connected
      */
     public boolean isConnected() {
@@ -130,8 +133,9 @@ public class MineparkClient {
      * @param args
      */
     public static void main(String[] args) {
-        String serverAddress = (args.length == 0) ? "localhost" : args[0];
-        MineparkClient client = new MineparkClient(serverAddress);
+        String serverAddress = (args.length == 0 ? "localhost" : args[0]);
+        int port = (args.length < 2 ? 7001 : Integer.parseInt(args[1]));
+        MineparkClient client = new MineparkClient(serverAddress, port);
         Scanner input = new Scanner(System.in);
         while (client.isConnected()) {
             System.out.print("Type a message to send to server: ");

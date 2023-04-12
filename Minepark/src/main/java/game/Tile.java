@@ -74,7 +74,7 @@ public class Tile extends Button {
             } // Hit a tile that is in contact with a mine
             // Clear it and display the number of surrounding mines
             else {
-                this.effect = new SoundEffect("click");
+                this.effect = new SoundEffect("fastclick",1);
                 effect.start();
                 setTileNumber(getType());
             }
@@ -91,10 +91,13 @@ public class Tile extends Button {
 
     public void tease() {
         if (isCovered() && !isFlagged()) {
+            this.effect = new SoundEffect("suspense", 1);
+            effect.start();
             setGraphic(getImageSure());
             setOnMouseReleased(e -> {
                 if (isCovered() && !isFlagged()) {
                     setGraphic(getImageTile());
+                    effect.stop();
                 }
             });
         }
@@ -107,7 +110,6 @@ public class Tile extends Button {
             setGraphic(getImageFlag());
             setFlagged(true);
             getGame().setMines(getGame().getMines() - 1);
-//            game.getBase().setTop(scoreBar);
         }
     }
 
@@ -115,7 +117,6 @@ public class Tile extends Button {
         setFlagged(false);
         setGraphic(getImageTile());
         getGame().setMines(getGame().getMines() + 1);
-//        game.getBase().setTop(scoreBar);
     }
 
     public void mine() {
