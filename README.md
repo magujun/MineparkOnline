@@ -79,7 +79,7 @@ The Java and JavaFX courses that led me to develop this project are part of Okan
 
 Course Instructors:
 
-**[Sarah Foss](https://github.com/sarahfoss)**  COSC121 :: Computer Programming I
+**[Sarah Foss](https://github.com/sarahfoss)**  COSC121 :: Computer Programming II
 
 **[Daniel Ling]()** COSC318 :: Network Programming
 
