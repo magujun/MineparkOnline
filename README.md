@@ -70,8 +70,8 @@ Install Apache [Maven](https://maven.apache.org/install.html) and run from proje
 - Minepark (Game) ```mvn javafx:run```
 
 **MAVEN Compile & Package**
-- MineparkOnline (Server) ```mvn jlink:compile jpackage:jpackage```
-- Minepark (Game) ```mvn jlink:compile jpackage:jpackage```
+- MineparkOnline (Server) ```mvn clean compile jlink:java jpackage:jpackage```
+- Minepark (Game) ```mvn clean compile jlink:javafx jpackage:jpackage```
 
 ## 🎓 Who taught?
 
