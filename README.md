@@ -75,11 +75,7 @@ Install Apache [Maven](https://maven.apache.org/install.html) and run from proje
 
 ## 🎓 Who taught?
 
-The Java and JavaFX courses that led me to develop this project are part of Okanagan College's Computer Information Systems.
-
-Course Instructors:
-
-**[Sarah Foss](https://github.com/sarahfoss)**  COSC121 :: Computer Programming II
+The Java and JavaFX courses that led me to develop this project are part of Okanagan College's Computer Information Systems Diploma Program.
 
 **[Daniel Ling](https://www.okanagan.bc.ca/ling-daniel)** COSC318 :: Network Programming
 
