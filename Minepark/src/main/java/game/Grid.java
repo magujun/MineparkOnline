@@ -50,11 +50,13 @@ public class Grid extends GridPane {
                             game.getMusic().stop();
                             game.setMusic(new Music("newGame", game.getDifficulty()));
                             game.getMusic().start();
-                            tiles = TileSet.setTiles(numRows, numCols, mines, tile);
-                            tileSet();
+                            if (game.getMultiplayer() == null || game.getRound() == 0) {
+                                tiles = TileSet.setTiles(numRows, numCols, mines, tile);
+                                tileSet();
+                            }
                             tile.click();
                             game.getTimeline().play();
-                            getState(tile, tiles, numRows, numCols);
+                            getGridState(tile, tiles, numRows, numCols);
                             clicks[0]++;
                         }
                     } // Handle secondary mouse button click, which sets flags on and off
@@ -65,11 +67,11 @@ public class Grid extends GridPane {
                     else if (mouseButton == MouseButton.SECONDARY) {
                         tile.flag();
                         tile.check();
-                        getState(tile, tiles, numRows, numCols);
+                        getGridState(tile, tiles, numRows, numCols);
                     } // Handle primary single click on a tile, checks for state, flags and mines
                     else {
                         tile.click();
-                        getState(tile, tiles, numRows, numCols);
+                        getGridState(tile, tiles, numRows, numCols);
                     }
                 });
 
@@ -79,10 +81,10 @@ public class Grid extends GridPane {
         }
     }
 
-    public String getState(Tile tile, int[][] tiles, int numRows, int numCols) {
+    public String getGridState(Tile tile, int[][] tiles, int numRows, int numCols) {
 
-        gridState = "";
         // Update grid state and output layout to console
+        gridState = "";
         for (int row = 0; row < numRows; row++) {
             for (int col = 0; col < numCols; col++) {
                 int item = row * numCols + col;
@@ -99,7 +101,7 @@ public class Grid extends GridPane {
         return gridState;
     }
 
-    public void setState(int[][] tiles, int numRows, int numCols, String gridState) {
+    public void setGridState(int[][] tiles, int numRows, int numCols, String gridState) {
 
         // Update grid state 
         // Debug: output layout to console
@@ -110,19 +112,15 @@ public class Grid extends GridPane {
                 int item = row * numCols + col;
                 tileState = gridState.charAt(item);
                 tile = (Tile) getChildren().get(item);
-                switch (tileState) {
-                    case 'F':
-                        tile.flag();
-                        break;
-                    case 'X':
-                        tile.mine();
-                        break;
-                    case 'C':
-                        tile.clear();
-                        break;
-                    default:
-                        tile.setTileNumber(tiles[row][col] + '0');
-                        break;
+                if (!tile.isFlagged()) {
+                    switch (tileState) {
+                        case 'X':
+                            tile.mine();
+                            break;
+                        case 'C':
+                            tile.clear();
+                            break;
+                    }
                 }
                 System.out.print(tileState + " ");
                 gridState += tileState;
@@ -177,7 +175,6 @@ public class Grid extends GridPane {
     public void tileSet() {
         // TILES POSITIONING
         // On first click, get mines positioning
-        // Update grid state and output layout to console
         Tile tile;
         for (int row = 0; row < getNumRows(); row++) {
             for (int col = 0; col < getNumCols(); col++) {

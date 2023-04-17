@@ -14,7 +14,7 @@ public class MainMenu extends MenuBar {
     public MainMenu(Game game) {
 
         this.menu = new Menu("Menu");
-        this.effect = new SoundEffect("fastclick",1);
+        this.effect = new SoundEffect("fastclick", 1);
         setStyle("-fx-background-radius: 0 0 10 10;");
         getMenus().add(menu);
 
@@ -26,7 +26,7 @@ public class MainMenu extends MenuBar {
             modeSingle.setDisable(false);
             modeMulti.setDisable(false);
             game.getTimeline().stop();
-            game.play(game.getDifficulty(), game.getMultiplayer(), game.getClient());
+            game.play(game.getDifficulty(), null);
         });
 
         scoresItem = new MenuItem("High Scores");
@@ -53,7 +53,7 @@ public class MainMenu extends MenuBar {
             effect.start();
             game.getTimeline().stop();
             game.getStage().close();
-            game.play("Beginner", game.getMultiplayer(), game.getClient());
+            game.play("Beginner", null);
         });
 
         difficultyItem = new MenuItem("Intermediate");
@@ -62,7 +62,7 @@ public class MainMenu extends MenuBar {
             effect.start();
             game.getTimeline().stop();
             game.getStage().close();
-            game.play("Intermediate", game.getMultiplayer(), game.getClient());
+            game.play("Intermediate", null);
         });
 
         difficultyItem = new MenuItem("Expert");
@@ -71,7 +71,7 @@ public class MainMenu extends MenuBar {
             effect.start();
             game.getTimeline().stop();
             game.getStage().close();
-            game.play("Expert", game.getMultiplayer(), game.getClient());
+            game.play("Expert", null);
         });
 
         modeMenu = new Menu("Mode");
@@ -84,8 +84,8 @@ public class MainMenu extends MenuBar {
             modeSingle.setDisable(false);
             modeMulti.setDisable(true);
             game.getTimeline().stop();
-            game.setMultiplayer(new Multiplayer(game));
-            game.getMultiplayer().multiplayerMenu();
+            Multiplayer multiplayer = new Multiplayer(game);
+            multiplayer.multiplayerMenu();
         });
 
         modeSingle = new MenuItem("Singleplayer");
@@ -96,10 +96,7 @@ public class MainMenu extends MenuBar {
             modeSingle.setDisable(true);
             modeMulti.setDisable(false);
             game.getTimeline().stop();
-            if (game.getClient() != null) {
-                game.getMultiplayer().disconnectServer();
-            }
-            game.play(game.getDifficulty(), null, null);
+            game.play(game.getDifficulty(), null);
         });
     }
 }

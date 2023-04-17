@@ -1,5 +1,6 @@
 package multiplayer;
 
+import game.Alert;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,20 +16,17 @@ import javax.net.ssl.SSLSocketFactory;
  * OPPONENT // players loop PLE // players list end TIE TIE TIE MESSAGE
  *
  */
-
-    /**
-     * The main thread of the client will listen for messages from the
-     * server.The first message will be a "CONNECTED" message in which we receive
-     * our mark.Then we go into a loop listening for "VALID_MOVE",
-     * "OPPONENT_MOVED", "VICTORY", "DEFEAT", "TIE", "OPPONENT_QUIT or "MESSAGE"
-     * messages, and handling each message appropriately. The "VICTORY",
-     * "DEFEAT" and "TIE" ask the user whether or not to play another game. If
-     * the answer is no, the loop is exited and the server is sent a "QUIT"
-     * message. If an OPPONENT_QUIT message is received then the loop will exit
-     * and the server will be sent a "QUIT" message also.
-     *
-     */
-
+/**
+ * The main thread of the client will listen for messages from the server.The
+ * first message will be a "CONNECTED" message in which we receive our mark.Then
+ * we go into a loop listening for "VALID_MOVE", "OPPONENT_MOVED", "VICTORY",
+ * "DEFEAT", "TIE", "OPPONENT_QUIT or "MESSAGE" messages, and handling each
+ * message appropriately. The "VICTORY", "DEFEAT" and "TIE" ask the user whether
+ * or not to play another game. If the answer is no, the loop is exited and the
+ * server is sent a "QUIT" message. If an OPPONENT_QUIT message is received then
+ * the loop will exit and the server will be sent a "QUIT" message also.
+ *
+ */
 public class MineparkClient {
 
     private boolean connected;
@@ -56,8 +54,11 @@ public class MineparkClient {
             this.output = new PrintWriter(socket.getOutputStream(), true);
             this.connected = true;
         } catch (IOException ioe) {
-            System.out.println("Socket error: " + ioe.getLocalizedMessage());
             this.connected = false;
+            System.out.println("Socket error: " + ioe.getLocalizedMessage());
+            message = "No connection to server";
+            Alert alert = new Alert();
+            alert.showMessage(message);
         }
     }
 
@@ -70,12 +71,14 @@ public class MineparkClient {
             return input.readLine();
         } catch (IOException ioe) {
             System.out.println("InputStream error: " + ioe.getLocalizedMessage());
+            disconnect();
         }
         return null;
     }
 
     public void disconnect() {
         try {
+            send("DISCONNECT");
             input.close();
             output.close();
             socket.close();
@@ -87,14 +90,16 @@ public class MineparkClient {
 
     public String listen() {
 
-        if (input != null) message = receive();
+        if (input != null) {
+            message = receive();
+        }
         if (message != null) {
             if (message.equals("CONNECTED")) {
                 setConnected(true);
                 return message;
             } else if (message.startsWith("OPPONENT|")) {
                 return message;
-            } else if (message.startsWith("ACCEPT|")) {
+            } else if (message.startsWith("ACCEPTED|")) {
                 return message;
             } else if (message.equals("PLS")) {
                 playerList = "PL|";
@@ -107,13 +112,12 @@ public class MineparkClient {
                 return (playerList.split("\\|").length > 1 ? playerList : null);
             }
         }
-        System.out.println(message);
         return null;
     }
 
     /**
-     * 
-     * 
+     *
+     *
      * @return the connected
      */
     public boolean isConnected() {

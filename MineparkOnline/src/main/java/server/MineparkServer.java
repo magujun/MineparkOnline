@@ -74,7 +74,7 @@ public class MineparkServer {
             };
 
             executor = Executors.newScheduledThreadPool(1);
-            executor.scheduleAtFixedRate(checkPlayers, 0, 10, TimeUnit.SECONDS);
+            executor.scheduleAtFixedRate(checkPlayers, 0, 5, TimeUnit.SECONDS);
 
             try (SSLServerSocket listener = (SSLServerSocket) ssf.createServerSocket(PORT)) {
                 players = new ArrayList<>();
@@ -82,9 +82,9 @@ public class MineparkServer {
                 while (true) {
                     SSLSocket socket = (SSLSocket) listener.accept();
                     Player player = new Player(socket);
-                    if (!player.isConnected()) {
+                    if (!player.isConnected() || player.getNickname() == null) {
                         disconnectPlayer(player);
-                        break;
+                        continue;
                     }
                     System.out.println(" - New player: " + player.getNickname());
                     player.send("CONNECTED");
@@ -114,22 +114,24 @@ public class MineparkServer {
 
     static void checkConnectedPlayers() {
         for (Player p : players) {
-            if (p.getInput() == null || p.receive() == null) {
+            if (p.getInput() == null) {
                 disconnectPlayer(p);
+            } else if (!p.isExit() && !p.isAlive()) {
+                p.start();
             }
         }
     }
 
     static void disconnectPlayer(Player p) {
-
         try {
-            p.getMatch().disconnect();
+            System.out.println("Disconnecting " + p.getName());
+            players.remove(p);
             p.setConnected(false);
+            p.setOpponent(null);
             p.getInput().close();
             p.getOutput().close();
             p.getSocket().close();
-            System.out.println(p + " disconnected");
-            players.remove(p);
+            System.out.println(p.getName() + " disconnected");
         } catch (IOException ioe) {
             String message = "Error disconnecting player: " + ioe.getLocalizedMessage();
             System.out.println(message);

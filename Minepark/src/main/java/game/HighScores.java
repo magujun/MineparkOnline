@@ -74,7 +74,8 @@ public class HighScores {
         stage.setScene(scene);
         stage.setTitle("Minepark High Scores");
         stage.setResizable(false);
-        stage.centerOnScreen();
+        stage.setX(game.getStage().getX() + 125);
+        stage.setY(game.getStage().getY() + 250);
         stage.requestFocus();
         stage.show();
 

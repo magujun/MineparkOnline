@@ -1,6 +1,5 @@
 package game;
 
-import multiplayer.Multiplayer;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -11,49 +10,47 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import multiplayer.MineparkClient;
+import multiplayer.Multiplayer;
 
-public class Game extends BorderPane {
+public class Game {
 
-    private int numCols, numRows, cleared, timer, mines;
-    private boolean safe, dead, isTurn;
-    private String difficulty, playerImg, opponentImg, alert;
+    private int numCols, numRows, cleared, timer, mines, round;
+    private boolean safe, dead, turn;
+    private String difficulty, playerImg, alert, tileSet;
+    private Stage stage;
     private BorderPane base;
     private Timeline timeline;
     private Grid grid;
     private ScoreBar scorebar;
     private MainMenu menu;
     private HighScores highscores;
+    private Multiplayer multiplayer;
     private Music music;
     private Tile mine;
-    private Stage stage;
-    private Multiplayer multiplayer;
-    private MineparkClient client;
 
     // First run constructor
     public Game(Stage stage) {
         this.stage = stage;
         this.safe = false;
         this.dead = false;
+        this.difficulty = "Beginner";
+        this.round = 0;
+        this.multiplayer = null;
     }
 
     public void play() {
         // Start game with default "Beginner" difficulty
-        play("Beginner", null, null);
+        play(difficulty, null);
     }
 
     // Start new game
-    public void play(String difficulty, Multiplayer multiplayer, MineparkClient client) {
-
-        setMultiplayer(multiplayer);
-        if (getMultiplayer() != null) {
-            setOpponentImg("opponent" + getDifficulty());
-        }
-        setTimer(this.getMultiplayer() == null ? 0 : 20);
-        setDead(false);
-        setSafe(false);
+    public void play(String difficulty, Multiplayer multiplayer) {
 
         setDifficulty(difficulty);
+        setMultiplayer(multiplayer);
+        setTimer(multiplayer != null ? 20 : 0);
+        setDead(false);
+        setSafe(false);
 
         if (getMusic() != null && getMusic().isPlaying()) {
             getMusic().stop();
@@ -68,19 +65,19 @@ public class Game extends BorderPane {
                 setNumCols(16);
                 setNumRows(16);
                 setMines(40);
-                setPlayerImg("butters.png");
+                setPlayerImg("Intermediate.png");
                 break;
             case "Expert":
                 setNumCols(32);
                 setNumRows(16);
                 setMines(99);
-                setPlayerImg("mysterion.png");
+                setPlayerImg("Expert.png");
                 break;
             default: // "Beginner"
                 setNumCols(8);
                 setNumRows(8);
                 setMines(10);
-                setPlayerImg("kenny.png");
+                setPlayerImg("Beginner.png");
                 break;
         }
 
@@ -118,6 +115,15 @@ public class Game extends BorderPane {
 
         getTimeline().setCycleCount(Animation.INDEFINITE);
 
+        if (multiplayer != null) {
+            Timeline multiline = new Timeline(new KeyFrame(Duration.seconds(20), e -> {
+                play(isTurn());
+            }));
+
+            multiline.setCycleCount(Animation.INDEFINITE);
+            multiline.play();
+        }
+
         // SET SCENE AND OPTIONS
         Scene scene = new Scene(getBase());
         getStage().getIcons().add(new Image("minepark.png"));
@@ -127,30 +133,51 @@ public class Game extends BorderPane {
         getStage().show();
     }
 
+    public void play(boolean turn) {
+        while (true) {
+            if (isTurn()) {
+                myTurn();
+            } else {
+                opponentTurn();
+            }
+        }
+    }
+
     public void myTurn() {
+        getGrid().setDisable(false);
+        getGrid().opacityProperty().set(100.0);
+        setPlayerImg(getDifficulty() + ".png");
         setTimer(20);
-        getTimeline().play();
-        setPlayerImg(getPlayerImg());
-        while (getTimer() != 0 && !getGrid().isPressed()) {}
-        getTimeline().stop();
-        getGrid().setDisable(true);
-        getGrid().opacityProperty().set(90.0);
-        setTurn(false);
-        client.send(getGrid().getGridState());
-        opponentTurn();
+        while (timer > 0 || !getGrid().isPressed()) {}
+        if (round == 0) {
+            tileSet = "TILESET|";
+            for (Node node : getGrid().getChildren()) {
+                Tile tile = (Tile) node;
+                tileSet += (char) tile.getType() + '0';
+                multiplayer.getClient().send(tileSet);
+            }
+        }
+        tileSet = getGrid().getGridState();
+        tileSet = (isSafe() ? "WON|" + tileSet : isDead() ? "LOST|" + tileSet : tileSet);
+        multiplayer.getClient().send(tileSet);
+        turn = false;
+        round++;
     }
 
     public void opponentTurn() {
+        getGrid().setDisable(true);
+        getGrid().opacityProperty().set(90.0);
+        setPlayerImg("opponent" + getDifficulty() + ".png");
         setTimer(20);
-        getTimeline().play();
-        setPlayerImg(getOpponentImg());
-        while (getTimer() != 0) {}
-        getTimeline().stop();
-        getGrid().setDisable(false);
-        getGrid().opacityProperty().set(100.0);
-        setTurn(true);
-        getGrid().setState(getGrid().getTiles(), getGrid().getNumRows(), getGrid().getNumCols(), client.receive());
-        myTurn();
+        if (round == 0) {
+            tileSet = multiplayer.getClient().receive().split("\\|")[1];
+            getGrid().setGridState(getGrid().getTiles(), getGrid().getNumRows(), getGrid().getNumCols(), tileSet);
+        }
+        while (timer > 0) {}
+        tileSet = multiplayer.getClient().receive();
+        getGrid().setGridState(getGrid().getTiles(), getGrid().getNumRows(), getGrid().getNumCols(), tileSet);
+        turn = true;
+        round++;
     }
 
     // Process game win for clearing all safe tiles
@@ -315,20 +342,6 @@ public class Game extends BorderPane {
     }
 
     /**
-     * @return the turn
-     */
-    public boolean isTurn() {
-        return isTurn;
-    }
-
-    /**
-     * @param aTurn the turn to set
-     */
-    public void setTurn(boolean aTurn) {
-        isTurn = aTurn;
-    }
-
-    /**
      * @return the difficulty
      */
     public String getDifficulty() {
@@ -483,17 +496,31 @@ public class Game extends BorderPane {
     }
 
     /**
-     * @return the client
+     * @return the alert
      */
-    public MineparkClient getClient() {
-        return client;
+    public String getAlert() {
+        return alert;
     }
 
     /**
-     * @param aClient the client to set
+     * @param alert the alert to set
      */
-    public void setClient(MineparkClient aClient) {
-        client = aClient;
+    public void setAlert(String alert) {
+        this.alert = alert;
+    }
+
+    /**
+     * @return the round
+     */
+    public int getRound() {
+        return round;
+    }
+
+    /**
+     * @param round the round to set
+     */
+    public void setRound(int round) {
+        this.round = round;
     }
 
     /**
@@ -511,31 +538,17 @@ public class Game extends BorderPane {
     }
 
     /**
-     * @return the alert
+     * @return the turn
      */
-    public String getAlert() {
-        return alert;
+    public boolean isTurn() {
+        return turn;
     }
 
     /**
-     * @param alert the alert to set
+     * @param turn the turn to set
      */
-    public void setAlert(String alert) {
-        this.alert = alert;
-    }
-
-    /**
-     * @return the opponentImage
-     */
-    public String getOpponentImg() {
-        return opponentImg;
-    }
-
-    /**
-     * @param opponentImage the opponentImage to set
-     */
-    public void setOpponentImg(String opponentImage) {
-        this.opponentImg = opponentImage;
+    public void setTurn(boolean turn) {
+        this.turn = turn;
     }
 
 }

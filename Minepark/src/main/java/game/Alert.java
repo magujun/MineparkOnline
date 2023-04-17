@@ -8,6 +8,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
@@ -53,7 +54,8 @@ public class Alert {
         stage.setScene(scene);
         stage.setTitle("Minepark Alert");
         stage.setResizable(false);
-        stage.centerOnScreen();
+        stage.setX(Screen.getScreens().get(0).getBounds().getMaxX() - 325);
+        stage.setY(Screen.getScreens().get(0).getBounds().getMaxY() - 225);
         stage.requestFocus();
         stage.show();
 
@@ -67,7 +69,7 @@ public class Alert {
         messageBox.getChildren().add(alert);
 
         fadeIn.play();
-        
+
         fadeOut.setDelay(Duration.seconds(3));
         fadeOut.play();
 

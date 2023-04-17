@@ -16,12 +16,13 @@ import static server.MineparkServer.*;
  */
 class Player extends Thread {
 
-    private String nickname, message, grid, move;
+    private String nickname, message, difficulty, move;
     private Player opponent;
     private SSLSocket socket;
     private BufferedReader input;
     private PrintWriter output;
-    private boolean connected;
+    private boolean connected, invited;
+    private volatile boolean exit;
     private Match match;
 
     /**
@@ -35,56 +36,14 @@ class Player extends Thread {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new PrintWriter(socket.getOutputStream(), true);
             if (input.readLine().equals("CONNECT")) {
+                this.output.println("NICKNAME");
                 this.nickname = input.readLine();
                 this.connected = true;
+                this.exit = false;
             }
         } catch (IOException e) {
             System.out.println("Connection error with player " + nickname + ":" + e);
         }
-    }
-
-    public void findMatch() {
-        while (getOpponent() == null && isConnected()) {
-            listen();
-        }
-
-        // The thread is only started after everyone connects.
-        if (isConnected()) {
-            setMatch(new Match(this, getOpponent()));
-            getMatch().connect();
-        }
-    }
-
-    public void listen() {
-
-        if (input == null) {
-            disconnectPlayer(this);
-        } else {
-            message = receive();
-            if (message == null) {
-                disconnectPlayer(this);
-            } else if (message.equals("LIST")) {
-                listPlayers(this);
-            } else if (message.startsWith("OPPONENT|")) {
-                String opponentNickname = getMessage().split("\\|")[1];
-                setOpponent(getPlayer(opponentNickname));
-            }
-        }
-
-    }
-
-    /**
-     * Accepts notification of who the opponent is.
-     */
-    public void setOpponent(Player opponent) {
-        this.opponent = opponent;
-    }
-
-    /**
-     * Handles the otherPlayerMoved message.
-     */
-    public void otherPlayerMoved() {
-        send("OPPONENT_MOVED");
     }
 
     /**
@@ -92,33 +51,59 @@ class Player extends Thread {
      */
     @Override
     public void run() {
+        while (!exit) {
+            match = null;
+            findMatch();
+        }
+        if (opponent != null) {
+            playMatch();
+        }
+    }
 
-        findMatch();
-        while (isConnected() && getOpponent() != null) {
+    public void findMatch() {
+        while (getOpponent() == null) {
+            listen();
+        }
+    }
 
-            // Repeatedly get commands from the client and process them
-            setGrid(null);
-            send("TURN");
-            getOpponent().send("WAIT");
-            while (getOpponent() != null && isConnected()) {
-                setMove(receive());
-                if (getMove() == null) {
-                    break;
-                } else if (getMove().startsWith("WON")) {
-                    setGrid(getMove().substring(4));
-                    getOpponent().send("LOST" + getGrid());
-                    break;
-                } else if (getMove().startsWith("LOST")) {
-                    setGrid(getMove().substring(5));
-                    getOpponent().send("WON" + getGrid());
-                    break;
-                } else {
-                    setGrid(getMove());
-                    getOpponent().send(getGrid());
-                }
-                System.out.println(getGrid());
-                send("WAIT");
-                getOpponent().send("TURN");
+    public void playMatch() {
+        exit = false;
+
+        // The match thread is only started after opponent accepts connection.
+        if (!isInvited()) {
+            System.out.println(nickname + " is inviting " + getOpponent().getNickname() + " to a match");
+            String response = receive();
+            while (response == null || !response.startsWith("ACCEPTED|")) {
+                response = receive();
+            }
+        } else { // Accepted the connection as opponent and the match thread starts.
+            System.out.println(nickname + " is joining " + getOpponent().getNickname() + " in a match");
+        }
+        match = new Match(this, getOpponent());
+        match.play();
+    }
+
+    public void listen() {
+        message = receive();
+        if (message != null) {
+            if (message.startsWith("DISCONNECT")) {
+                disconnectPlayer(this);
+            } else if (message.equals("LIST")) {
+                listPlayers(this);
+            } else if (message.startsWith("OPPONENT|")) {
+                String opponentNickname = getMessage().split("\\|")[1];
+                setDifficulty(message.split("\\|")[2]);
+                setOpponent(getPlayer(opponentNickname));
+                String handshake = "OPPONENT|" + nickname + "|" + difficulty;
+                opponent.send(handshake);
+                setExit(true);
+            } else if (message.startsWith("ACCEPT|")) {
+                String opponentNickname = message.split("\\|")[1];
+                setOpponent(getPlayer(opponentNickname));
+                opponent.send("ACCEPTED|" + getNickname());
+                setInvited(true);
+                setExit(true);
+
             }
         }
     }
@@ -142,6 +127,13 @@ class Player extends Thread {
      */
     public Player getOpponent() {
         return opponent;
+    }
+
+    /**
+     * Accepts notification of who the opponent is.
+     */
+    public void setOpponent(Player opponent) {
+        this.opponent = opponent;
     }
 
     /**
@@ -180,7 +172,7 @@ class Player extends Thread {
         try {
             return this.input.readLine();
         } catch (IOException ioe) {
-            System.out.println("InputStream error: " + ioe.getLocalizedMessage());
+            System.out.println("Input" + ioe.getLocalizedMessage());
             disconnectPlayer(this);
         }
         return null;
@@ -198,20 +190,6 @@ class Player extends Thread {
      */
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    /**
-     * @return the grid
-     */
-    public String getGrid() {
-        return grid;
-    }
-
-    /**
-     * @param grid the grid to set
-     */
-    public void setGrid(String grid) {
-        this.grid = grid;
     }
 
     /**
@@ -268,5 +246,47 @@ class Player extends Thread {
      */
     public void setMatch(Match match) {
         this.match = match;
+    }
+
+    /**
+     * @return the difficulty
+     */
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    /**
+     * @param difficulty the difficulty to set
+     */
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    /**
+     * @return the invited
+     */
+    public boolean isInvited() {
+        return invited;
+    }
+
+    /**
+     * @param invited the invited to set
+     */
+    public void setInvited(boolean invited) {
+        this.invited = invited;
+    }
+
+    /**
+     * @return the exit
+     */
+    public boolean isExit() {
+        return exit;
+    }
+
+    /**
+     * @param exit the exit to set
+     */
+    public void setExit(boolean exit) {
+        this.exit = exit;
     }
 }

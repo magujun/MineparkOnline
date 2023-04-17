@@ -2,9 +2,11 @@ package game;
 
 /**
  * ***********************************************
- * Marcelo Guimaraes Junior Minepark
- * https://linkedin.com/in/marcelo-guimaraes-junior https://github.com/magujun
- * Please don't copy my code =) **********************************************
+ * Marcelo Guimaraes Junior MineparkOnline
+ * https://linkedin.com/in/marcelo-guimaraes-junior 
+ * https://github.com/magujun/MineparkOnline
+ * Please don't copy my code =) 
+ **********************************************
  */
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
